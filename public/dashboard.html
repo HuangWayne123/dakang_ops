@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>达康站群运营看板</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7f2;
+        --panel: #ffffff;
+        --panel-soft: #eef4e8;
+        --text: #17311f;
+        --muted: #5e7263;
+        --line: #d9e3d6;
+        --brand: #1f7a4d;
+        --accent: #db8f0f;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .shell {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px 20px 60px;
+      }
+      h1, h2, h3, p { margin: 0; }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 24px;
+      }
+      .hero p { color: var(--muted); margin-top: 10px; max-width: 760px; line-height: 1.7; }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      select, button {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font: inherit;
+      }
+      button {
+        background: var(--brand);
+        color: #fff;
+        border-color: var(--brand);
+        cursor: pointer;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 8px 24px rgba(23, 49, 31, 0.04);
+      }
+      .metric {
+        grid-column: span 3;
+      }
+      .metric .label {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      .metric .value {
+        font-size: 34px;
+        font-weight: 700;
+      }
+      .metric .note {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .wide { grid-column: span 6; }
+      .full { grid-column: 1 / -1; }
+      .sites { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .site-card {
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .site-card h3 { font-size: 16px; margin-bottom: 12px; }
+      .site-card dl {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 12px;
+      }
+      .site-card dt {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .site-card dd {
+        margin: 4px 0 0;
+        font-weight: 600;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th, td {
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th { color: var(--muted); font-weight: 600; }
+      .trend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 10px;
+      }
+      .trend-item {
+        padding: 12px;
+        border-radius: 12px;
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+      }
+      .trend-item strong {
+        display: block;
+        font-size: 18px;
+        margin-top: 10px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--brand);
+        background: rgba(31, 122, 77, 0.1);
+        border-radius: 999px;
+        padding: 6px 10px;
+      }
+      @media (max-width: 960px) {
+        .metric, .wide { grid-column: 1 / -1; }
+        .sites { grid-template-columns: 1fr; }
+        .hero { flex-direction: column; align-items: stretch; }
+        .toolbar { justify-content: space-between; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="hero">
+        <div>
+          <span class="badge">内部汇报版</span>
+          <h1 style="margin-top: 12px;">达康站群 GEO / SEO 运营看板</h1>
+          <p>查看四个官网的总曝光、访问、AI 代理命中、FAQ 命中和高意图问题覆盖，用于给老板汇报当前站群可见度与增长节奏。</p>
+        </div>
+        <div class="toolbar">
+          <select id="days">
+            <option value="7">近 7 天</option>
+            <option value="30" selected>近 30 天</option>
+            <option value="90">近 90 天</option>
+          </select>
+          <button id="refresh">刷新数据</button>
+        </div>
+      </div>
+
+      <div class="grid" id="dashboard">
+        <div class="card full">正在加载数据...</div>
+      </div>
+    </div>
+
+    <script>
+      const dashboard = document.getElementById("dashboard");
+      const daysSelect = document.getElementById("days");
+      const refreshButton = document.getElementById("refresh");
+      const token = new URLSearchParams(window.location.search).get("token");
+
+      const siteLabels = {
+        group: "达康控股",
+        food: "达康食品",
+        cognivora: "认知黑洞",
+        supplychain: "达康供应链",
+      };
+
+      function renderOverview(summary) {
+        const metrics = [
+          ["总 PV", summary.overview.pageViews, "核心页面总曝光"],
+          ["独立访客", summary.overview.uniqueVisitors, "按会话/IP 指纹估算"],
+          ["AI 代理访问", summary.overview.aiVisits, "AI 引荐或 AI 爬虫相关访问"],
+          ["智能体命中率", `${summary.overview.agentHitRate}%`, `${summary.overview.agentAuditHits}/${summary.overview.agentAuditTotal} 个抽检问题命中`],
+        ];
+
+        return metrics.map(([label, value, note]) => `
+          <section class="card metric">
+            <div class="label">${label}</div>
+            <div class="value">${value}</div>
+            <div class="note">${note}</div>
+          </section>
+        `).join("");
+      }
+
+      function renderSites(summary) {
+        const items = Object.entries(summary.sites).map(([site, value]) => `
+          <article class="site-card">
+            <h3>${siteLabels[site] || site}</h3>
+            <dl>
+              <div><dt>PV（页面浏览量）</dt><dd>${value.pageViews}</dd></div>
+              <div><dt>UV（独立访客数）</dt><dd>${value.uniqueVisitors}</dd></div>
+              <div><dt>AI 访问</dt><dd>${value.aiVisits}</dd></div>
+              <div><dt>FAQ 命中</dt><dd>${value.faqOpens}</dd></div>
+              <div><dt>联系方式点击</dt><dd>${value.contactClicks}</dd></div>
+              <div><dt>平均停留(秒)</dt><dd>${value.averageDwellSeconds}</dd></div>
+              <div><dt>智能体抽检命中率</dt><dd>${value.agentHitRate}%</dd></div>
+              <div><dt>抽检数</dt><dd>${value.agentAuditHits}/${value.agentAuditTotal}</dd></div>
+            </dl>
+          </article>
+        `).join("");
+
+        return `<section class="card wide"><h2>单站表现</h2><div class="sites" style="margin-top: 16px;">${items}</div></section>`;
+      }
+
+      function renderTrend(summary) {
+        const items = summary.trend.slice(-8).map((item) => `
+          <div class="trend-item">
+            <div style="color: var(--muted); font-size: 12px;">${item.date}</div>
+            <strong>${item.pageViews}</strong>
+            <div style="margin-top: 6px; color: var(--muted); font-size: 12px;">AI ${item.aiVisits} / 联系 ${item.contactClicks}</div>
+          </div>
+        `).join("");
+
+        return `<section class="card wide"><h2>最近趋势</h2><div class="trend" style="margin-top: 16px;">${items || "<div>暂无趋势数据</div>"}</div></section>`;
+      }
+
+      function renderTable(title, rows, columns) {
+        const head = columns.map((column) => `<th>${column.label}</th>`).join("");
+        const body = rows.length
+          ? rows.map((row) => `<tr>${columns.map((column) => `<td>${row[column.key] ?? ""}</td>`).join("")}</tr>`).join("")
+          : `<tr><td colspan="${columns.length}">暂无数据</td></tr>`;
+
+        return `
+          <section class="card full">
+            <h2>${title}</h2>
+            <table style="margin-top: 16px;">
+              <thead><tr>${head}</tr></thead>
+              <tbody>${body}</tbody>
+            </table>
+          </section>
+        `;
+      }
+
+      async function loadSummary() {
+        dashboard.innerHTML = '<div class="card full">正在加载数据...</div>';
+        const days = daysSelect.value;
+        const response = await fetch(`/api/summary?days=${days}&token=${encodeURIComponent(token || "")}`);
+        if (!response.ok) {
+          dashboard.innerHTML = '<div class="card full">加载失败，请确认 token 是否正确，且服务端已启动。</div>';
+          return;
+        }
+
+        const summary = await response.json();
+        dashboard.innerHTML = [
+          renderOverview(summary),
+          renderSites(summary),
+          renderTrend(summary),
+          renderTable("Top 页面", summary.topPages.map((item) => ({
+            site: siteLabels[item.site] || item.site,
+            page: item.page,
+            count: item.count,
+          })), [
+            { key: "site", label: "站点" },
+            { key: "page", label: "页面" },
+            { key: "count", label: "曝光" },
+          ]),
+          renderTable("FAQ / 问题命中", summary.faqHighlights.map((item) => ({
+            site: siteLabels[item.site] || item.site,
+            question: item.question,
+            opens: item.opens,
+          })), [
+            { key: "site", label: "站点" },
+            { key: "question", label: "问题" },
+            { key: "opens", label: "打开次数" },
+          ]),
+          renderTable("智能体抽检问题覆盖", summary.keywordPrompts.map((item) => ({
+            site: siteLabels[item.site] || item.site,
+            prompt: item.prompt,
+            engines: item.engines.join(" / "),
+            hitRate: `${item.hitRate}%`,
+            landingPage: item.landingPage || "-",
+          })), [
+            { key: "site", label: "站点" },
+            { key: "prompt", label: "问题" },
+            { key: "engines", label: "引擎" },
+            { key: "hitRate", label: "命中率" },
+            { key: "landingPage", label: "落地页" },
+          ]),
+        ].join("");
+      }
+
+      refreshButton.addEventListener("click", loadSummary);
+      daysSelect.addEventListener("change", loadSummary);
+      loadSummary().catch(() => {
+        dashboard.innerHTML = '<div class="card full">加载失败，请稍后重试。</div>';
+      });
+    </script>
+  </body>
+</html>
