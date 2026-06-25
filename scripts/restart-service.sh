@@ -21,6 +21,8 @@ if [[ -z "${NODE_BIN:-}" || -z "${NPM_BIN:-}" ]]; then
   exit 1
 fi
 
+export PATH="$(dirname "$NODE_BIN"):$PATH"
+
 mkdir -p "$APP_DIR/data" "$RUN_DIR" "$LOG_DIR"
 cd "$APP_DIR"
 
