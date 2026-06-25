@@ -182,7 +182,6 @@
       const dashboard = document.getElementById("dashboard");
       const daysSelect = document.getElementById("days");
       const refreshButton = document.getElementById("refresh");
-      const token = new URLSearchParams(window.location.search).get("token");
 
       const siteLabels = {
         group: "达康控股",
@@ -260,9 +259,9 @@
       async function loadSummary() {
         dashboard.innerHTML = '<div class="card full">正在加载数据...</div>';
         const days = daysSelect.value;
-        const response = await fetch(`/api/summary?days=${days}&token=${encodeURIComponent(token || "")}`);
+        const response = await fetch(`/api/summary?days=${days}`);
         if (!response.ok) {
-          dashboard.innerHTML = '<div class="card full">加载失败，请确认 token 是否正确，且服务端已启动。</div>';
+          dashboard.innerHTML = '<div class="card full">加载失败，请确认服务端已启动。</div>';
           return;
         }
 

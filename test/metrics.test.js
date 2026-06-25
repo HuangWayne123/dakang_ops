@@ -10,6 +10,7 @@ import {
   parseAllowedOrigins,
   resolveTrackAccessControlOrigin,
 } from "../src/cors.js";
+import { buildSummaryResponse } from "../src/summary.js";
 
 test("normalizeEventPayload marks AI referrals and required fields", () => {
   const payload = normalizeEventPayload(
@@ -158,4 +159,16 @@ test("resolveTrackAccessControlOrigin blocks unknown cross-origin requests", () 
   const allowedOrigin = resolveTrackAccessControlOrigin("https://malicious.example", []);
 
   assert.equal(allowedOrigin, null);
+});
+
+test("buildSummaryResponse returns summary without requiring dashboard token context", () => {
+  const result = buildSummaryResponse({
+    events: [],
+    audits: [],
+    days: 30,
+    now: "2026-06-25T00:00:00.000Z",
+  });
+
+  assert.equal(typeof result.overview.pageViews, "number");
+  assert.equal(result.overview.pageViews, 0);
 });

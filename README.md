@@ -21,9 +21,9 @@
 
 ## 建议的站点反向代理
 
-- 看板入口: `/ops/dashboard?token=...`
+- 看板入口: `/ops/dashboard`
 - 采集接口: `/ops/api/track`
-- 汇总接口: `/ops/api/summary?token=...`
+- 汇总接口: `/ops/api/summary`
 
 反向代理需要把 `/ops/*` 转发到 `dakang_ops` 服务，并去掉路径前缀 `/ops`。例如：
 
@@ -31,6 +31,8 @@
 - `/ops/dashboard` -> `http://127.0.0.1:3200/dashboard`
 
 推荐线上保持这种同域 `/ops` 入口，前端无需写死后台域名；只有在静态站本地直连调试时，才用绝对地址覆盖。
+
+当前版本不再要求 dashboard、summary 或 agent-audit 携带 token。
 
 ## 跨域说明
 

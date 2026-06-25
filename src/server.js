@@ -3,12 +3,12 @@ import path from "node:path";
 import express from "express";
 
 import { parseAllowedOrigins, resolveTrackAccessControlOrigin } from "./cors.js";
-import { buildSummary, normalizeEventPayload } from "./metrics.js";
+import { normalizeEventPayload } from "./metrics.js";
+import { buildSummaryResponse } from "./summary.js";
 import { appendAgentAudit, appendEvent, getAgentAudits, getEvents } from "./storage.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3200);
-const DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN || "dakang-internal";
 const HASH_SALT = process.env.HASH_SALT || "dakang-ops";
 const TRACK_ALLOWED_ORIGINS = parseAllowedOrigins(process.env.TRACK_ALLOWED_ORIGINS || "");
 
@@ -17,15 +17,6 @@ app.use("/dashboard-assets", express.static(path.resolve(process.cwd(), "public"
 
 function hashIp(ipAddress) {
   return crypto.createHash("sha256").update(`${HASH_SALT}:${ipAddress || "unknown"}`).digest("hex");
-}
-
-function requireDashboardToken(req, res, next) {
-  const token = req.query.token || req.get("x-dashboard-token");
-  if (token !== DASHBOARD_TOKEN) {
-    res.status(401).json({ error: "unauthorized" });
-    return;
-  }
-  next();
 }
 
 function applyTrackCors(req, res, next) {
@@ -64,7 +55,7 @@ app.post("/api/track", applyTrackCors, async (req, res) => {
   res.status(202).json({ ok: true, acceptedAt: occurredAt, aiSignal: record.aiSignal });
 });
 
-app.post("/api/agent-audit", requireDashboardToken, async (req, res) => {
+app.post("/api/agent-audit", async (req, res) => {
   const payload = req.body || {};
   const record = {
     occurredAt: payload.occurredAt || new Date().toISOString(),
@@ -80,20 +71,18 @@ app.post("/api/agent-audit", requireDashboardToken, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-app.get("/api/summary", requireDashboardToken, async (req, res) => {
+app.get("/api/summary", async (req, res) => {
   const days = Number(req.query.days || 30);
   const [events, audits] = await Promise.all([getEvents(), getAgentAudits()]);
-  res.json(
-    buildSummary({
-      events,
-      audits,
-      days: Number.isFinite(days) && days > 0 ? days : 30,
-      now: new Date().toISOString(),
-    }),
-  );
+  res.json(buildSummaryResponse({
+    events,
+    audits,
+    days: Number.isFinite(days) && days > 0 ? days : 30,
+    now: new Date().toISOString(),
+  }));
 });
 
-app.get("/dashboard", requireDashboardToken, (_req, res) => {
+app.get("/dashboard", (_req, res) => {
   res.sendFile(path.resolve(process.cwd(), "public/dashboard.html"));
 });
 
