@@ -259,7 +259,7 @@
       async function loadSummary() {
         dashboard.innerHTML = '<div class="card full">正在加载数据...</div>';
         const days = daysSelect.value;
-        const response = await fetch(`/api/summary?days=${days}`);
+        const response = await fetch(`api/summary?days=${days}`);
         if (!response.ok) {
           dashboard.innerHTML = '<div class="card full">加载失败，请确认服务端已启动。</div>';
           return;
